@@ -1,0 +1,36 @@
+{
+  "projects": [
+    {
+      "name": "Contributor Onboarding",
+      "owner": "Mona Lisa",
+      "status": "On track",
+      "recentActivity": "Updated the first-contribution guide yesterday",
+      "priority": "High",
+      "summary": "Make it easier for new contributors to find a good first issue and get a local setup running."
+    },
+    {
+      "name": "Search Improvements",
+      "owner": "Alex Chen",
+      "status": "In progress",
+      "recentActivity": "Search relevance review completed this week",
+      "priority": "Medium",
+      "summary": "Improve issue and documentation search so contributors can find existing answers faster."
+    },
+    {
+      "name": "Accessibility Audit",
+      "owner": "Priya Patel",
+      "status": "Needs attention",
+      "recentActivity": "Keyboard navigation findings shared on Monday",
+      "priority": "High",
+      "summary": "Address the highest-impact accessibility gaps across the project website and dashboard."
+    },
+    {
+      "name": "Release Notes Automation",
+      "owner": "Jordan Lee",
+      "status": "Planning",
+      "recentActivity": "Draft workflow proposal opened for feedback",
+      "priority": "Low",
+      "summary": "Reduce manual release preparation by collecting merged changes into clear draft notes."
+    }
+  ]
+}

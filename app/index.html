@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A contributor-friendly overview of current project work.">
+    <title>Project Pulse</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header>
+        <p>Team overview</p>
+        <h1>Project Pulse</h1>
+        <p>A clear snapshot of what the team is working on and where contributors can help.</p>
+      </header>
+
+      <section aria-labelledby="projects-heading">
+        <h2 id="projects-heading">Projects</h2>
+        <p id="project-count" aria-live="polite">Loading projects…</p>
+        <p id="dashboard-message" class="loading" role="status" aria-live="polite" aria-atomic="true">
+          Loading project data…
+        </p>
+        <div id="projects" class="project-grid" aria-label="Project list"></div>
+      </section>
+    </main>
+    <script>
+      const projectsRegion = document.querySelector("#projects");
+      const messageRegion = document.querySelector("#dashboard-message");
+      const projectCount = document.querySelector("#project-count");
+
+      function setMessage(message, className) {
+        messageRegion.textContent = message;
+        messageRegion.className = className;
+        messageRegion.hidden = false;
+      }
+
+      function makeDetail(label, value, className, dataAttribute) {
+        const wrapper = document.createElement("div");
+        const term = document.createElement("dt");
+        const description = document.createElement("dd");
+
+        term.textContent = label;
+        description.textContent = value;
+        if (className) {
+          description.classList.add(className);
+        }
+        if (dataAttribute) {
+          description.dataset[dataAttribute.name] = dataAttribute.value;
+          description.classList.add(`${dataAttribute.name}--${dataAttribute.value}`);
+        }
+
+        wrapper.append(term, description);
+        return wrapper;
+      }
+
+      function makeProjectCard(project, index) {
+        const card = document.createElement("article");
+        const heading = document.createElement("h3");
+        const summary = document.createElement("p");
+        const activity = document.createElement("p");
+        const activityLabel = document.createElement("strong");
+        const details = document.createElement("dl");
+        const statusSlug = project.status.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const prioritySlug = project.priority.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const headingId = `project-heading-${index + 1}`;
+
+        card.className = "project-card";
+        card.setAttribute("aria-labelledby", headingId);
+        heading.id = headingId;
+        heading.textContent = project.name;
+        summary.className = "summary";
+        summary.textContent = project.summary;
+        activityLabel.textContent = "Recent activity: ";
+        activity.append(activityLabel, document.createTextNode(project.recentActivity));
+        details.append(
+          makeDetail("Owner", project.owner),
+          makeDetail("Status", project.status, "status", { name: "status", value: statusSlug }),
+          makeDetail("Priority", project.priority, "priority", { name: "priority", value: prioritySlug })
+        );
+        card.append(heading, summary, activity, details);
+        return card;
+      }
+
+      async function loadProjects() {
+        setMessage("Loading project data…", "loading");
+
+        try {
+          const response = await fetch("project-data.json");
+          if (!response.ok) {
+            throw new Error(`The server responded with ${response.status}.`);
+          }
+
+          const data = await response.json();
+          if (!data || !Array.isArray(data.projects)) {
+            throw new Error("The data file must contain a projects array.");
+          }
+
+          data.projects.forEach((project, index) => {
+            const fields = ["name", "owner", "status", "recentActivity", "priority", "summary"];
+            if (!project || fields.some((field) => typeof project[field] !== "string" || !project[field].trim())) {
+              throw new Error(`Project ${index + 1} is missing a required text field.`);
+            }
+          });
+
+          if (data.projects.length === 0) {
+            projectCount.textContent = "No projects yet";
+            setMessage("There are no projects to display yet.", "empty-state");
+            return;
+          }
+
+          const cards = data.projects.map(makeProjectCard);
+          projectsRegion.replaceChildren(...cards);
+          projectCount.textContent = `${cards.length} ${cards.length === 1 ? "project" : "projects"}`;
+          messageRegion.hidden = true;
+        } catch (error) {
+          projectCount.textContent = "Project data unavailable";
+          setMessage(
+            `We couldn’t load the project data. ${error instanceof Error ? error.message : "Please try again later."}`,
+            "error"
+          );
+        }
+      }
+
+      loadProjects();
+    </script>
+  </body>
+</html>
