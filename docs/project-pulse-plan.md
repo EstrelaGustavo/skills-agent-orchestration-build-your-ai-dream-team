@@ -2,67 +2,99 @@
 
 ## Summary
 
-Build Mona's lightweight Project Pulse dashboard as a static app that helps contributors see active projects, owners, current status, recent activity, priority or risk, and a short contributor-friendly summary. The repository brief requires `app/index.html`, `app/styles.css`, `app/project-data.json`, and a VS Code launch configuration that serves the `app/` directory and opens the dashboard page.
+Build Mona's lightweight static Project Pulse dashboard so contributors can quickly see project names, owners, current status, recent activity, priority or risk, and a concise summary. The dashboard should be a polished, responsive, accessible page backed by a local JSON file and open directly to its UI from VS Code.
 
-There is no existing `app/` directory or `launch.json`; the files in `.vscode/` currently include `tasks.json` for starting Copilot CLI, which should remain unchanged. The exercise already provides the project brief, the four custom agent definitions, a step-by-step learner workflow, and `scripts/validate-exercise.sh`. That script validates exercise scaffolding and learner-file conventions, but it does not launch or test the dashboard in a browser.
+## Repository findings and constraints
 
-## Roles and file ownership
+- The brief is `.github/project-pulse-brief.md`. It requires a top-level `projects` array with `name`, `owner`, `status`, `recentActivity`, and `priority`; it also asks for contributor-friendly summaries, so include a non-empty `summary` for every project.
+- The requested app files already exist: `app/index.html`, `app/styles.css`, and `app/project-data.json`. The existing page uses client-side `fetch("project-data.json")`, renders cards with `.project-card`, and shows loading, empty, and failure states. Preserve these behaviors while implementing or refining the app.
+- Existing CSS provides `.dashboard` and `.project-card` hooks, project status/priority treatments, a responsive layout, reduced-motion handling, and forced-colors handling. Designer should retain or improve these affordances rather than replace them with an unstyled page.
+- `.vscode/launch.json` already defines **Run Project Pulse Dashboard** with `python3 -m http.server 5500`, a working directory of `${workspaceFolder}/app`, and a `serverReadyAction` URL ending in `/index.html`. Keep it strict JSON and preserve this behavior.
+- There is no app package manifest or dedicated browser-test suite. `scripts/validate-exercise.sh` checks exercise scaffolding and conventions; the Step 3 workflow checks required files, phrases, and JSON parsing, but neither proves the dashboard renders in a browser.
+- `.vscode/tasks.json` and the dev-container scripts support the separate Copilot CLI exercise workflow; they are outside the implementation scope and must remain unchanged.
 
-| Role | Responsibilities | Assigned files |
+## Agent responsibilities and file ownership
+
+| Agent | Responsibilities | Assigned files |
 |---|---|---|
-| **Planner** | Research the brief, repository, and exercise checks; define the data/UI contract, sequence work, identify risks, and set acceptance checks. This plan is the Planner deliverable; the Planner does not implement app code. | `docs/project-pulse-plan.md` |
-| **Orchestrator** | Request the Planner's plan before implementation, translate it into explicit Designer/Coder assignments, enforce phase dependencies and non-overlapping file scopes, resolve coordination questions, then integrate and verify the result and report blockers or remaining risks. The Orchestrator coordinates but does not implement. | No implementation files |
-| **Designer** | Define and implement a polished, responsive, accessible visual system: clear hierarchy, readable spacing and typography, visible project cards, status badges, and clear priority treatment. Include the deterministic `.dashboard` and `.project-card` hooks requested by the exercise. | `app/styles.css` |
-| **Coder** | Implement the semantic dashboard page and data-driven rendering, provide deterministic sample project data, and create the runnable VS Code configuration. Keep the page connected to the Designer's CSS and the agreed data contract; handle loading and data errors clearly. | `app/index.html`, `app/project-data.json`, `.vscode/launch.json` |
+| **Planner** | Research the brief, repository, existing implementation, and validation limits; produce this plan with explicit ownership, dependencies, risks, and acceptance checks. Do not implement app files. | `docs/project-pulse-plan.md` |
+| **Orchestrator** | Ask for and use the Planner's plan; confirm the shared UI/data contract; delegate non-overlapping work; sequence dependent work; track integration issues; run or coordinate final checks; report results and remaining risks. Coordinate only, do not implement the app. | No app implementation files |
+| **Designer** | Shape and implement the visual system and responsive/accessibility behavior: information hierarchy, typography, card layout, status badges, priority/risk treatment, spacing, contrast, reduced-motion, and narrow-screen behavior. Share CSS hooks and design decisions before page integration. | `app/styles.css` |
+| **Coder** | Implement the semantic page and data-driven behavior, representative deterministic project data, and runnable VS Code preview configuration. Connect the page to the agreed CSS hooks/data contract; handle loading, empty, malformed-data, and fetch-failure cases; validate assigned files. | `app/index.html`, `app/project-data.json`, `.vscode/launch.json` |
 
-Do not assign the same file to Designer and Coder. Designer should share the CSS hooks and any layout assumptions with Coder before integration; Coder owns HTML structure and data-to-UI behavior.
+The Orchestrator must not broaden these scopes without explicitly reassigning ownership. In particular, Designer owns the stylesheet; Coder owns the HTML, data, and launch configuration. The plan is the Planner's only deliverable.
 
-## Implementation steps and dependencies
+## Implementation phases and dependencies
 
-### 1. Agree on the UI and data contract
+### Phase 1 — Confirm the contract and assignments
 
 - **Owner:** Orchestrator, informed by Planner and Designer.
 - **Files:** No implementation files.
-- Confirm the contract before parallel implementation: `project-data.json` has a top-level `projects` array; each item has `name`, `owner`, `status`, `recentActivity`, and `priority`. Include a concise contributor-friendly `summary` for each project as called for in the brief. Treat status and priority as readable text as well as visual styles, not color alone.
-- Define the CSS hooks and the page's loading, success, empty, and error states. Keep the project collection small and deterministic for this static exercise.
-- **Dependency:** None. This is the prerequisite for Steps 2 and 3.
+- Confirm that each project record contains non-empty `name`, `owner`, `status`, `recentActivity`, `priority`, and `summary` strings. Keep status and priority meaningful as visible text, not color alone.
+- Agree on the shared markup/CSS hooks (`.dashboard`, `.project-grid`, `.project-card`) and the page's loading, success, empty, and error states. Keep project examples deterministic and contributor-friendly.
+- Confirm the launch contract: serve `app/` on port `5500` and open `/index.html`, not the server root.
+- **Dependency:** None. This contract gates Phase 2.
 
-### 2. Create the data and visual foundation (parallel)
+### Phase 2 — Build independent foundations (parallel)
 
-- **Coder — `app/project-data.json`:** Add valid JSON with a top-level `projects` array and multiple representative project entries. Each entry must include the five required fields and a useful `summary`.
-- **Designer — `app/styles.css`:** Implement the polished card-based, responsive styling. Include `.dashboard` and `.project-card`, visible status badges, readable priority/risk treatment, adequate contrast, and clear focus styling where interactive controls exist. Use the agreed markup hooks and avoid assuming color is the only way to identify status or priority.
-- **Dependency:** Step 1 is complete. These two tasks can run in parallel because they own separate files and both follow the agreed contract. Designer and Coder should exchange the CSS hooks and field names before integration.
+After Phase 1, these file-scoped assignments can proceed in parallel:
 
-### 3. Connect the dashboard page and preview configuration (sequential)
+1. **Designer — `app/styles.css`:** Create or refine the polished responsive visual design. Include `.dashboard` and `.project-card`; style cards, readable metadata, status and priority badges; provide clear contrast and preserve reduced-motion/forced-colors support where applicable.
+2. **Coder — `app/project-data.json` and `.vscode/launch.json`:** Provide multiple representative records using the agreed six-field contract, and keep the launch configuration strict JSON with the exact name **Run Project Pulse Dashboard**, `cwd` `${workspaceFolder}/app`, command `python3 -m http.server 5500`, and a readiness action that opens `http://localhost:%s/index.html`.
 
-- **Coder — `app/index.html`:** Build a semantic page titled **Project Pulse**, link `styles.css`, load `project-data.json`, and render a `.project-card` for each project. Show name, owner, status, recent activity, priority, and summary. Use the `.dashboard` and `.project-card` hooks and handle loading, empty data, and fetch/parse failures with understandable messages. Loading JSON over HTTP via the launch server avoids relying on `fetch()` from a `file://` page.
-- **Coder — `.vscode/launch.json`:** Add strict JSON with a configuration named **Run Project Pulse Dashboard**. Set `cwd` to `${workspaceFolder}/app`, serve with `python3 -m http.server 5500`, and configure `serverReadyAction` to open `http://localhost:%s/index.html`, not the server root/directory listing. Make its readiness pattern match the server's actual startup output so the browser action is triggered reliably.
-- **Dependencies:** Step 2 must finish first: the HTML consumes both the agreed data shape and Designer's CSS hooks. The launch configuration depends on the app directory and the chosen `index.html` entry point. The two Coder files may be prepared during the same phase, but verify the actual launch only after all app files exist.
+- **Dependencies:** Both assignments depend on Phase 1. They use disjoint files and may run concurrently. Coder should share the data field names and launch assumptions with Designer/Orchestrator; Designer should communicate its hooks before HTML integration.
 
-### 4. Integrate and validate (sequential)
+### Phase 3 — Integrate page and data (sequential)
 
-- **Owner:** Orchestrator coordinates; Coder fixes implementation defects within its assigned files, and Designer fixes styling defects in `app/styles.css`.
-- Review all four required outputs together, run the checks below, launch the preview, and resolve mismatches before handing off.
-- **Dependency:** Steps 1–3 are complete. Do not begin final runtime validation while the app files are still changing.
+- **Owner:** Coder; Orchestrator coordinates.
+- **File:** `app/index.html`.
+- Build a semantic page with the exact title **Project Pulse**, stylesheet link to `styles.css`, and client-side load of `project-data.json`. Render one `.project-card` per project and visibly show its name, summary, owner, status, recent activity, and priority. Match the Designer's agreed hooks and use safe text insertion for data.
+- Preserve understandable loading, empty-project, invalid/missing-field, and fetch/HTTP failure messages. Ensure the page opens as the dashboard rather than relying on a `file://` fetch.
+- **Dependencies:** Phase 2 must establish the data contract and CSS hooks before page integration. This phase is sequential with Phase 2's outputs; it may not overwrite Designer-owned CSS.
 
-## Parallel and sequential work
+### Phase 4 — Integrated validation and fixes (sequential)
 
-- **Can run in parallel:** After the Step 1 contract is agreed, Designer can implement `app/styles.css` while Coder creates `app/project-data.json`. Their file scopes do not overlap.
-- **Must be sequential:** Agree on the data and CSS-hook contract before either parallel task; finish both before Coder integrates them in `app/index.html`; complete all implementation before integrated runtime validation.
-- **Must not overlap:** Designer owns only `app/styles.css`; Coder owns `app/index.html`, `app/project-data.json`, and `.vscode/launch.json`. The Orchestrator should keep any corrections within those assignments unless it explicitly reassigns ownership.
+- **Owner:** Orchestrator coordinates; Coder fixes HTML/data/launch defects in its assigned files and Designer fixes CSS defects in `app/styles.css`.
+- Validate all four implementation files together, launch the preview, check normal and failure states, then resolve mismatches within the existing assignments.
+- **Dependencies:** Phases 1–3 are complete and implementation files are stable. Runtime validation is last because it must exercise the integrated page, data, styles, and launch configuration.
 
-## Validation expectations
+## Parallel versus sequential work
 
-1. **Files and contract:** Confirm all four assigned implementation files exist. In `app/project-data.json`, verify JSON parses, the root is an object with a `projects` array, and every project has non-empty `name`, `owner`, `status`, `recentActivity`, `priority`, and `summary`.
-2. **Launch JSON:** Run `python3 -m json.tool .vscode/launch.json` and confirm it is strict JSON with no comments. Inspect that it has the exact **Run Project Pulse Dashboard** name, serves with `python3 -m http.server 5500`, sets `cwd` to `${workspaceFolder}/app`, and opens `/index.html` at the server-ready URL.
-3. **Markup and styling:** Confirm `app/index.html` has the exact title **Project Pulse**, links `styles.css`, loads `project-data.json`, and renders project cards with the `.project-card` class. Confirm `.dashboard` and `.project-card` selectors exist and styling includes responsive behavior, readable spacing, status/priority treatments, rounded corners, and shadows.
-4. **Runtime:** In VS Code, start **Run Project Pulse Dashboard**. Confirm the browser opens `http://localhost:5500/index.html` and displays the UI rather than a directory listing; check that every project field is visible and the number/content of cards matches the JSON. Stop the server after checking.
-5. **Resilience and accessibility:** Inspect the page at a narrow viewport and a desktop width; verify content reflows without horizontal scrolling, text and status/priority remain understandable without color, and headings/regions and any controls are keyboard-accessible with visible focus. Check the loading, empty-project, and failed-data-load messages (using an empty or temporarily unavailable data response as appropriate), then restore the intended sample data.
-6. **Repository and workflow validation:** Run `scripts/validate-exercise.sh` as a supplementary exercise check; it checks broader repository workflow/dev-container conventions, not runtime dashboard behavior. The Step 3 workflow checks that the four files exist, required phrases/selectors are present, and both JSON files parse, but it does not launch the server or verify the rendered UI. Treat the browser, responsive, and resilience checks above as separate acceptance checks rather than assuming CI covers them.
+- **Parallel:** In Phase 2, Designer may work on `app/styles.css` while Coder works on `app/project-data.json` and `.vscode/launch.json`, after the contract and hooks are agreed. The file scopes do not overlap.
+- **Sequential:** Agree the data/UI/launch contract first; finish the CSS hooks and data contract before Coder integrates `app/index.html`; validate the launch configuration only after all app files exist; run final runtime and accessibility checks after all implementation changes stop.
+- **No overlapping edits:** Designer changes only `app/styles.css`; Coder changes only `app/index.html`, `app/project-data.json`, and `.vscode/launch.json`. Orchestrator coordinates and verifies rather than implementing. If an assignment needs to change, the Orchestrator should state the new ownership explicitly before work continues.
+
+## Validation and acceptance expectations
+
+1. **File assignment and boundaries**
+   - Confirm the four expected outputs exist: `app/index.html`, `app/styles.css`, `app/project-data.json`, and `.vscode/launch.json`.
+   - Review the diff to ensure this implementation work has not changed `.vscode/tasks.json` or unrelated dev-container/exercise files.
+
+2. **Data contract**
+   - Run `python3 -m json.tool app/project-data.json`.
+   - Check that the root is an object with a `projects` array containing multiple entries and that each entry has non-empty `name`, `owner`, `status`, `recentActivity`, `priority`, and `summary` values.
+
+3. **Launch configuration**
+   - Run `python3 -m json.tool .vscode/launch.json` and confirm there are no comments or trailing-comma syntax errors.
+   - Inspect the **Run Project Pulse Dashboard** configuration: command `python3 -m http.server 5500`, `cwd` `${workspaceFolder}/app`, a server-ready pattern matching Python's startup output, and URL `http://localhost:%s/index.html`.
+
+4. **Page and styles**
+   - Confirm the document title is **Project Pulse**, `styles.css` is linked, `project-data.json` is fetched, and the rendered card markup uses `.project-card`.
+   - Confirm each project's name, summary, owner, status, recent activity, and priority is visible; verify the CSS contains `.dashboard`, `.project-card`, rounded card styling, shadows, and responsive rules.
+   - Inspect loading, empty, invalid-data, and failed-fetch messages. Confirm data is inserted as text rather than interpreted as HTML.
+
+5. **Runtime and responsive/accessibility review**
+   - In VS Code, start **Run Project Pulse Dashboard**. Confirm the browser opens `http://localhost:5500/index.html`, displays the dashboard rather than a directory listing, and shows one card for each JSON entry. Stop the server after checking.
+   - Inspect at desktop and narrow mobile widths (including around 320px); content must reflow without horizontal scrolling. Check heading/section structure, readable contrast, keyboard-visible focus for any interactive controls, and that status/priority meaning does not depend on color. Verify reduced-motion and forced-colors rules remain effective if present.
+
+6. **Exercise checks**
+   - Run `scripts/validate-exercise.sh` as a supplementary repository/exercise check.
+   - The Step 3 GitHub Actions workflow (`.github/workflows/3-step.yml`) checks the four required files, expected phrases/selectors, JSON parsing, and launch name/target. It does not start the server or inspect rendered browser behavior; treat the runtime and accessibility checks above as separate acceptance requirements.
 
 ## Risks and open questions
 
-- The brief does not prescribe exact sample projects, colors, or status/priority vocabularies. Choose realistic, contributor-friendly examples and consistent labels; keep them easy to edit in JSON.
-- Browser data loading requires the HTTP launch configuration. Opening the HTML directly as a local file is not the supported preview path.
-- The planned server port is `5500`, as specified in the exercise instructions. If it is already occupied, stop the conflicting process or report the issue rather than silently changing the expected launch URL.
-- The brief calls for a contributor-friendly summary but does not include `summary` in its required field list. Include it as an additional per-project field so the dashboard meets both requirements.
+- The brief does not prescribe sample projects, exact colors, or a fixed status/priority vocabulary. Choose consistent, contributor-friendly labels and communicate their visual mappings.
+- The required data list omits `summary`, while the brief also requires a short contributor-friendly summary. Include `summary` as an additional required string field and render it.
+- `fetch()` of the JSON is supported through the HTTP launch configuration, not by opening `app/index.html` directly as a `file://` URL.
+- Port `5500` is part of the exercise's expected launch setup. If it is occupied, report the conflict rather than silently changing the expected URL.
+- If the Planner agent cannot run because its configured model is unavailable, the Orchestrator should prepare this repository-grounded plan as a fallback and continue to honor the same file assignments and dependencies.
